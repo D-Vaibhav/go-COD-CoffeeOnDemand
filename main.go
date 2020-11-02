@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/vaibhav/CoffeeOnDemand/handlers"
 )
 
@@ -17,9 +18,20 @@ func main() {
 	// handlers
 	productHandler := handlers.NewProducts(l)
 
-	// create a new serveMux and registration of the handlers
-	serveMux := http.NewServeMux()
-	serveMux.Handle("/", productHandler)
+	// gorilla Router, generally named as router
+	serveMux := mux.NewRouter()
+
+	// sub-router
+	getRouter := serveMux.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/", productHandler.GetProducts)
+
+	postRouter := serveMux.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/", productHandler.AddProduct)
+
+	putRouter := serveMux.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", productHandler.UpdateProduct)
+
+	// serveMux.Handle("/products", productHandler)
 
 	// create a new server
 	server := http.Server{

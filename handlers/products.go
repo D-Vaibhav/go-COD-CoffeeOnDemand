@@ -3,7 +3,9 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/vaibhav/CoffeeOnDemand/data"
 )
 
@@ -15,29 +17,9 @@ func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
 
-func (p *Products) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		p.getProducts(rw, r)
-		return
-	}
+// no need for ServerHTTP()
 
-	if r.Method == http.MethodPost {
-		p.addProduct(rw, r)
-		return
-	}
-
-	if r.Method == http.MethodPut {
-		// expecting the ID in the URI
-		// r := regex.MustCompile(`/([0-9]+)`)
-		r.FindAllStringSubmatch()
-		path := r.URL.Path
-
-	}
-	// catch all
-	rw.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-func (p *Products) getProducts(rw http.ResponseWriter, r *http.Request) {
+func (p *Products) GetProducts(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET products")
 	productList := data.GetProducts()
 	err := productList.ToJSON(rw)
@@ -46,7 +28,7 @@ func (p *Products) getProducts(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Products) addProduct(rw http.ResponseWriter, r *http.Request) {
+func (p *Products) AddProduct(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle POST products")
 
 	// creating new product object
@@ -61,10 +43,19 @@ func (p *Products) addProduct(rw http.ResponseWriter, r *http.Request) {
 	data.AddProduct(prod)
 }
 
-func (p *Products) updateProduct(id int, rw http.ResponseWriter, r *http.Request) {
-	p.l.Println("Handle PUT request")
+func (p *Products) UpdateProduct(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(rw, "Unaclbe to convert ID", http.StatusBadRequest)
+		return
+	}
+
+	p.l.Println("Handle PUT request for ID:", id)
+
 	prod := &data.Product{}
-	err := prod.FromJSON(r.Body)
+
+	err = prod.FromJSON(r.Body)
 	if err != nil {
 		http.Error(rw, "Unable to unmarshal json data", http.StatusBadRequest)
 	}
